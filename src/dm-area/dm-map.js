@@ -1130,6 +1130,7 @@ export const DmMap = ({
               deleteToken={deleteToken}
               ratio={mapCanvasDimensions.ratio}
               isDisabled={isAltPressed}
+              contextMenuEnabled={true}
             />
             <AreaMarkerRenderer
               markedAreas={markedAreas}

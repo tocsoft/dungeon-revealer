@@ -143,7 +143,14 @@ const TokenContextMenu = ({
 };
 
 export const DmTokenMarker = React.memo(
-  ({ getRelativePosition, updateToken, deleteToken, ratio, token }) => {
+  ({
+    getRelativePosition,
+    updateToken,
+    deleteToken,
+    ratio,
+    token,
+    contextMenuEnabled
+  }) => {
     const tokenRef = useRef();
     const [contextMenuCoordinates, setContextMenuCoordinates] = useState(null);
 
@@ -241,7 +248,9 @@ export const DmTokenMarker = React.memo(
           onContextMenu={ev => {
             ev.preventDefault();
             ev.stopPropagation();
-            setContextMenuCoordinates({ x: ev.clientX, y: ev.clientY });
+            if (contextMenuEnabled) {
+              setContextMenuCoordinates({ x: ev.clientX, y: ev.clientY });
+            }
           }}
         />
         {contextMenuCoordinates ? (

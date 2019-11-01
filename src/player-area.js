@@ -13,8 +13,11 @@ import * as Icons from "./feather-icons";
 import { useSocket } from "./socket";
 import { AreaMarkerRenderer } from "./object-layer/area-marker-renderer";
 import { TokenRenderer } from "./object-layer/token-renderer";
+import { DmTokenRenderer } from "./object-layer/dm-token-renderer";
 import { LoadingScreen } from "./loading-screen";
 import { AuthenticationScreen } from "./authentication-screen";
+import { useStaticRef } from "./hooks/use-static-ref";
+import debounce from "lodash/debounce";
 
 const ToolbarContainer = styled.div`
   position: absolute;
@@ -379,6 +382,76 @@ const PlayerMap = ({ fetch, pcPassword }) => {
     socket.emit("mark area", { x: x / ratio, y: y / ratio });
   }, 500);
 
+  const getRelativePosition = useCallback(
+    pageCoordinates => {
+      const ref = new Referentiel(panZoomRef.current.getDragContainer());
+      const [x, y] = ref.global_to_local([
+        pageCoordinates.x,
+        pageCoordinates.y
+      ]);
+      const { ratio } = mapCanvasDimensions.current;
+      return { x: x / ratio, y: y / ratio };
+    },
+    [mapCanvasDimensions]
+  );
+
+  const localFetch = useCallback(
+    (input, init = {}) => {
+      return fetch(input, {
+        ...init,
+        headers: {
+          Authorization: pcPassword ? `Bearer ${pcPassword}` : undefined,
+          ...init.headers
+        }
+      }).then(res => {
+        if (res.status === 401) {
+          console.error("Unauthenticated access.");
+          throw new Error("Unauthenticated access.");
+        }
+        return res;
+      });
+    },
+    [pcPassword]
+  );
+
+  const persistTokenChanges = useStaticRef(() =>
+    debounce((mapId, id, updates, localFetch) => {
+      localFetch(`/map/${mapId}/token/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...updates
+        })
+      });
+    }, 100)
+  );
+
+  const updateToken = useCallback(
+    ({ id, ...updates }) => {
+      setCurrentMap(
+        produce(data => {
+          const map = data;
+          map.tokens = map.tokens.map(token => {
+            if (token.id !== id) return token;
+            return { ...token, ...updates };
+          });
+        })
+      );
+
+      persistTokenChanges(mapId, id, updates, localFetch);
+    },
+    [currentMap, mapId, persistTokenChanges, localFetch]
+  );
+
+  // const updateToken =
+  //   ({ id, ...updates }) => {
+  //     currentMap.tokens = currentMap.tokens.map(token => {
+  //       if (token.id !== id) return token;
+  //       return { ...token, ...updates };
+  //     });
+  //   }
   return (
     <>
       <PanZoom
@@ -401,8 +474,11 @@ const PlayerMap = ({ fetch, pcPassword }) => {
             }}
           />
           <ObjectLayer ref={objectSvgRef}>
-            <TokenRenderer
+            <DmTokenRenderer
               tokens={(currentMap && currentMap.tokens) || []}
+              updateToken={updateToken}
+              getRelativePosition={getRelativePosition}
+              contextMenuEnabled={false}
               ratio={
                 mapCanvasDimensions.current
                   ? mapCanvasDimensions.current.ratio

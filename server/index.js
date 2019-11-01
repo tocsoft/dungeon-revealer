@@ -412,6 +412,7 @@ app.delete("/map/:id/token/:tokenId", requiresDmRole, (req, res) => {
   });
 });
 
+// TODO update permissions chek here based on which token we are attempting to move
 app.patch("/map/:id/token/:tokenId", requiresDmRole, (req, res) => {
   const map = maps.get(req.params.id);
   if (!map) {
