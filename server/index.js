@@ -339,6 +339,16 @@ app.patch("/map/:id", requiresDmRole, (req, res) => {
     updates.gridColor = req.body.gridColor;
   }
 
+  let realTimeConfigChanged = false;
+  if ({}.hasOwnProperty.call(req.body, "improvedInititiveUrl")) {
+    updates.improvedInititiveUrl = req.body.improvedInititiveUrl;
+    realTimeConfigChanged = true;
+  }
+  if ({}.hasOwnProperty.call(req.body, "showImprovedInititive")) {
+    updates.showImprovedInititive = req.body.showImprovedInititive;
+    realTimeConfigChanged = true;
+  }
+
   if (Object.keys(updates).length) {
     map = maps.updateMapSettings(map.id, updates);
   }
@@ -349,6 +359,11 @@ app.patch("/map/:id", requiresDmRole, (req, res) => {
       map
     }
   });
+  if (realTimeConfigChanged) {
+    io.emit(`map updated realtime`, {
+      map
+    });
+  }
 });
 
 app.post("/map/:id/token", requiresDmRole, (req, res) => {

@@ -8,6 +8,7 @@ import { AlphaPicker, HuePicker } from "react-color";
 import parseColor from "parse-color";
 import { loadImage, getOptimalDimensions, ConditionalWrap } from "./../util";
 import { Toolbar } from "./../toolbar";
+import { Input } from "./../input";
 import styled from "@emotion/styled/macro";
 import { ObjectLayer } from "../object-layer";
 import * as Icons from "../feather-icons";
@@ -418,12 +419,17 @@ export const DmMap = ({
     setAreaSelectionStartCoordinates
   ] = useState(null);
   const [showGridSettings, setShowGridSettings] = useState(false);
+  const [showInititiveSettings, setShowInititiveSettings] = useState(false);
 
   const isAltPressed = useIsKeyPressed("Alt");
 
   const [gridColor, setGridColor] = useResetState(
     () => parseMapColor(map.gridColor),
     [map.gridColor]
+  );
+  const [improvedInititiveUrl, setImprovedInititiveUrl] = useResetState(
+    () => map.improvedInititiveUrl,
+    [map.improvedInititiveUrl]
   );
 
   const onGridColorChangeComplete = useCallback(() => {
@@ -1205,6 +1211,39 @@ export const DmMap = ({
             <Toolbar.Item isEnabled>
               <Toolbar.Button
                 onClick={() => {
+                  setShowInititiveSettings(
+                    showInititiveSettings => !showInititiveSettings
+                  );
+
+                  if (showInititiveSettings) {
+                    updateMap(map.id, { improvedInititiveUrl });
+                  }
+                }}
+              >
+                <Icons.Inbox />
+                <Icons.Label>{"Improved Inititive"}</Icons.Label>
+              </Toolbar.Button>
+              {showInititiveSettings ? (
+                <ShowImprovedInititiveSettingsPopup
+                  showImprovedInititive={map.showImprovedInititive}
+                  improvedInititiveUrl={improvedInititiveUrl}
+                  setImprovedInititiveUrl={improvedInititiveUrl => {
+                    setImprovedInititiveUrl(improvedInititiveUrl);
+                  }}
+                  setShowImprovedInititive={showImprovedInititive => {
+                    updateMap(map.id, { showImprovedInititive });
+                  }}
+                  onClickOutside={() => {
+                    setShowInititiveSettings(false);
+                    updateMap(map.id, { improvedInititiveUrl });
+                  }}
+                />
+              ) : null}
+            </Toolbar.Item>
+
+            <Toolbar.Item isEnabled>
+              <Toolbar.Button
+                onClick={() => {
                   showMapModal();
                 }}
               >
@@ -1516,6 +1555,72 @@ const ShowGridSettingsPopup = React.memo(
               onChangeComplete={onGridColorChangeComplete}
             />
           </div>
+        </div>
+      </Toolbar.Popup>
+    );
+  }
+);
+
+const ShowImprovedInititiveSettingsPopup = React.memo(
+  ({
+    improvedInititiveUrl,
+    setImprovedInititiveUrl,
+    setShowImprovedInititive,
+    showImprovedInititive,
+    onClickOutside
+  }) => {
+    const popupRef = useOnClickOutside(onClickOutside);
+    return (
+      <Toolbar.Popup ref={popupRef}>
+        <h4 style={{ textAlign: "left", marginTop: 8 }}>
+          Improved Inititive Settings
+        </h4>
+        <div>
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                textAlign: "left",
+                marginTop: 8,
+                cursor: "pointer"
+              }}
+            >
+              <div style={{ flexGrow: 1 }}>Show Tracker to Players</div>
+              <div style={{ marginLeft: 8 }}>
+                <ToggleSwitch
+                  checked={showImprovedInititive}
+                  onChange={ev => {
+                    setShowImprovedInititive(ev.target.checked);
+                  }}
+                />
+              </div>
+            </label>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                textAlign: "left",
+                cursor: "pointer"
+              }}
+            >
+              <div style={{ flexGrow: 1 }}>Player Code</div>
+              <div style={{ marginLeft: 8 }}>
+                <Input
+                  placeholder="Url/Code"
+                  value={improvedInititiveUrl}
+                  onChange={ev => {
+                    setImprovedInititiveUrl(ev.target.value);
+                  }}
+                  style={{ marginBottom: 24 }}
+                />
+              </div>
+            </label>
+          </div>
+
+          <a href="https://www.improved-initiative.com/e/" target="blank">
+            improved-initiative.com
+          </a>
         </div>
       </Toolbar.Popup>
     );

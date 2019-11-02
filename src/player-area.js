@@ -12,7 +12,7 @@ import styled from "@emotion/styled/macro";
 import * as Icons from "./feather-icons";
 import { useSocket } from "./socket";
 import { AreaMarkerRenderer } from "./object-layer/area-marker-renderer";
-import { TokenRenderer } from "./object-layer/token-renderer";
+import { ImprovedInitiative } from "./improved-initiative";
 import { DmTokenRenderer } from "./object-layer/dm-token-renderer";
 import { LoadingScreen } from "./loading-screen";
 import { AuthenticationScreen } from "./authentication-screen";
@@ -67,6 +67,7 @@ const PlayerMap = ({ fetch, pcPassword }) => {
   const mapId = currentMap ? currentMap.id : null;
   const socket = useSocket();
   const [showSplashScreen, setShowSplashScreen] = useState(true);
+  const [showToolbar, setshowToolbar] = useState(false);
 
   /**
    * used for canceling pending requests in case there is a new update incoming.
@@ -116,19 +117,30 @@ const PlayerMap = ({ fetch, pcPassword }) => {
         console.log("disconnected from server");
       });
 
+      const onReceiveMapRealTime = async data => {
+        if (!data) {
+          return;
+        }
+
+        // update improved inititive ui
+        setCurrentMap(
+          produce(map => {
+            if (map && map.id == data.map.id) {
+              map.improvedInititiveUrl = data.map.improvedInititiveUrl;
+              map.showImprovedInititive = data.map.showImprovedInititive;
+            }
+          })
+        );
+      };
+
       const onReceiveMap = async data => {
+        onReceiveMapRealTime(data);
+
         if (!data) {
           return;
         }
 
         const context = mapCanvasRef.current.getContext("2d");
-
-        if (pendingImageLoads.current) {
-          pendingImageLoads.current.forEach(task => {
-            task.cancel();
-          });
-          pendingImageLoads.current = null;
-        }
 
         /**
          * Hide map (show splashscreen)
@@ -139,6 +151,8 @@ const PlayerMap = ({ fetch, pcPassword }) => {
           mapCanvasDimensions.current = null;
           mapImageRef.current = null;
 
+          const context = mapCanvasRef.current.getContext("2d");
+
           context.clearRect(
             0,
             0,
@@ -148,6 +162,13 @@ const PlayerMap = ({ fetch, pcPassword }) => {
           setShowSplashScreen(true);
           return;
         }
+        if (pendingImageLoads.current) {
+          pendingImageLoads.current.forEach(task => {
+            task.cancel();
+          });
+          pendingImageLoads.current = null;
+        }
+
         /**
          * Fog has updated
          */
@@ -298,6 +319,7 @@ const PlayerMap = ({ fetch, pcPassword }) => {
       });
 
       socket.on("map update", onReceiveMap);
+      socket.on("map updated realtime", onReceiveMapRealTime);
 
       const contextmenuListener = ev => {
         ev.preventDefault();
@@ -411,7 +433,7 @@ const PlayerMap = ({ fetch, pcPassword }) => {
         return res;
       });
     },
-    [pcPassword]
+    [fetch, pcPassword]
   );
 
   const persistTokenChanges = useStaticRef(() =>
@@ -442,7 +464,7 @@ const PlayerMap = ({ fetch, pcPassword }) => {
 
       persistTokenChanges(mapId, id, updates, localFetch);
     },
-    [currentMap, mapId, persistTokenChanges, localFetch]
+    [mapId, persistTokenChanges, localFetch]
   );
 
   // const updateToken =
@@ -493,7 +515,14 @@ const PlayerMap = ({ fetch, pcPassword }) => {
           </ObjectLayer>
         </div>
       </PanZoom>
-      {!showSplashScreen ? (
+      {currentMap &&
+      currentMap.improvedInititiveUrl &&
+      currentMap.showImprovedInititive ? (
+        <ImprovedInitiative
+          improvedInititiveUrl={currentMap.improvedInititiveUrl}
+        />
+      ) : null}
+      {!showSplashScreen && showToolbar ? (
         <ToolbarContainer>
           <Toolbar horizontal>
             <Toolbar.Logo />
